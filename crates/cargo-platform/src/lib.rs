@@ -117,11 +117,13 @@ impl Platform {
                 }
                 CfgExpr::Value(ref e) => match e {
                     Cfg::Name(name) | Cfg::KeyPair(name, _) => {
-                        if KEYWORDS.contains(&name.as_str()) {
+                        if !name.raw && KEYWORDS.contains(&name.as_str()) {
                             warnings.push(format!(
                                 "[{}] future-incompatibility: `cfg({e})` is deprecated as `{name}` is a keyword \
                                  and not an identifier and should not have have been accepted in this position.\n \
-                                 | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!",
+                                 | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!\n \
+                                 |\n \
+                                 | help: use raw-idents instead: `cfg(r#{name})`",
                                  path.display()
                             ));
                         }
