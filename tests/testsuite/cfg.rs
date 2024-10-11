@@ -550,9 +550,14 @@ fn cfg_keywords() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(true)` is deprecated as `true` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+[WARNING] [.cargo/config.toml] future-incompatibility: `cfg(false)` is deprecated as `false` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
 "#]])
         .run();
 }
