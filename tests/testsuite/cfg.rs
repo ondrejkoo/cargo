@@ -543,12 +543,12 @@ fn cfg_raw_idents() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `any(r#fn, r#all, r#target_os = "<>")` as a cfg expression: unexpected character `#` in cfg, expected parens, a comma, an identifier, or a string
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(r#fn)` is deprecated as `r#fn` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -577,7 +577,7 @@ fn cfg_raw_idents_empty() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `r#)` as a cfg expression: unexpected content `#)` found after cfg expression
+  failed to parse `r#)` as a cfg expression: unexpected character `)` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
@@ -606,7 +606,7 @@ fn cfg_raw_idents_not_really() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `r#11)` as a cfg expression: unexpected content `#11)` found after cfg expression
+  failed to parse `r#11)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
