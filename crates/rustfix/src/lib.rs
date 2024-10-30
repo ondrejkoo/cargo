@@ -216,15 +216,15 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
 /// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
 /// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
 #[derive(Clone)]
-pub struct CodeFix {
-    data: replace::Data,
+pub struct CodeFix<'orig> {
+    data: replace::Data<'orig>,
     /// Whether or not the data has been modified.
     modified: bool,
 }
 
-impl CodeFix {
+impl<'orig> CodeFix<'orig> {
     /// Creates a `CodeFix` with the source of a file to modify.
-    pub fn new(s: &str) -> CodeFix {
+    pub fn new(s: &'orig str) -> CodeFix<'orig> {
         CodeFix {
             data: replace::Data::new(s.as_bytes()),
             modified: false,
@@ -232,7 +232,7 @@ impl CodeFix {
     }
 
     /// Applies a suggestion to the code.
-    pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+    pub fn apply(&mut self, suggestion: &'orig Suggestion) -> Result<(), Error> {
         for solution in &suggestion.solutions {
             self.apply_solution(solution)?;
         }
@@ -240,10 +240,10 @@ impl CodeFix {
     }
 
     /// Applies an individual solution from a [`Suggestion`].
-    pub fn apply_solution(&mut self, solution: &Solution) -> Result<(), Error> {
+    pub fn apply_solution(&mut self, solution: &'orig Solution) -> Result<(), Error> {
         for r in &solution.replacements {
             self.data
-                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
+                .replace_range(r.snippet.range.clone(), &r.replacement.as_bytes())
                 .inspect_err(|_| self.data.restore())?;
         }
         self.data.commit();
