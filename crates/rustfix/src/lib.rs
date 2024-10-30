@@ -226,7 +226,7 @@ impl<'orig> CodeFix<'orig> {
     /// Creates a `CodeFix` with the source of a file to modify.
     pub fn new(s: &'orig str) -> CodeFix<'orig> {
         CodeFix {
-            data: replace::Data::new(s.as_bytes()),
+            data: replace::Data::new(s),
             modified: false,
         }
     }
@@ -243,7 +243,7 @@ impl<'orig> CodeFix<'orig> {
     pub fn apply_solution(&mut self, solution: &'orig Solution) -> Result<(), Error> {
         for r in &solution.replacements {
             self.data
-                .replace_range(r.snippet.range.clone(), &r.replacement.as_bytes())
+                .replace_range(r.snippet.range.clone(), &r.replacement)
                 .inspect_err(|_| self.data.restore())?;
         }
         self.data.commit();
