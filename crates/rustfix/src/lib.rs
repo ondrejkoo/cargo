@@ -262,22 +262,21 @@ impl CodeFix {
     }
 }
 
-/// Applies multiple `suggestions` to the given `code`.
+/// Applies multiple `suggestions` to the given `code`, discarding identical suggestions automatically.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
-    let mut already_applied = HashSet::new();
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        // This assumes that if any of the machine applicable fixes in
-        // a diagnostic suggestion is a duplicate, we should see the
-        // entire suggestion as a duplicate.
-        if suggestion
-            .solutions
-            .iter()
-            .any(|sol| !already_applied.insert(sol))
-        {
-            continue;
-        }
-        fix.apply(suggestion)?;
+        fix.apply(suggestion).or_else(ignore_identical)?;
     }
     fix.finish()
+}
+
+/// Discard errors for identical changes while passing through other error types.
+pub fn ignore_identical<T: Default>(err: Error) -> Result<T, Error> {
+    match err {
+        Error::AlreadyReplaced {
+            is_identical: true, ..
+        } => Ok(Default::default()),
+        _ => Err(err),
+    }
 }

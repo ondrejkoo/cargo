@@ -14,7 +14,13 @@ pub enum Error {
     MaybeAlreadyReplaced(Range<usize>),
 
     #[error("cannot replace slice of data that was already replaced")]
-    AlreadyReplaced,
+    AlreadyReplaced {
+        /// The location of the intended replacement.
+        range: Range<usize>,
+        /// Whether the modification exactly matches (both range and data) the one it conflicts with.
+        /// Some clients may wish to simply ignore this condition.
+        is_identical: bool,
+    },
 
     #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
