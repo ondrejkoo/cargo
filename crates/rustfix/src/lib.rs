@@ -253,7 +253,7 @@ impl<'orig> CodeFix<'orig> {
 
     /// Gets the result of the "fixed" code.
     pub fn finish(&self) -> Result<String, Error> {
-        Ok(String::from_utf8(self.data.to_vec())?)
+        self.data.to_string()
     }
 
     /// Returns whether or not the data has been modified.
