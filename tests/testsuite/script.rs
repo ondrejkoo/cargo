@@ -1,4 +1,7 @@
+use std::fs;
+
 use cargo_test_support::basic_manifest;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -306,20 +309,25 @@ fn use_script_config() {
         .at("script")
         .file("script.rs", script)
         .build();
+    let root = paths::root();
+    let my_home = root.join("my_home");
+    fs::create_dir(&my_home).unwrap();
+    fs::write(
+        &my_home.join("config.toml"),
+        r#"
+            [build]
+            rustc = "non-existent-rustc"
+        "#,
+    )
+    .unwrap();
 
     let p = cargo_test_support::project()
-        .file(
-            ".cargo/config.toml",
-            r#"
-[build]
-rustc = "non-existent-rustc"
-"#,
-        )
         .file("script.rs", script)
         .build();
 
     // Verify the config is bad
     p.cargo("-Zscript script.rs -NotAnArg")
+        .env("CARGO_HOME", &my_home)
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
