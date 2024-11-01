@@ -9,7 +9,7 @@ use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
-use cargo_util::paths::{self, normalize_path};
+use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
 };
@@ -579,7 +579,7 @@ fn normalize_package_toml<'a>(
             .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        build: targets::normalize_build(original_package.build.as_ref(), package_root),
+        build: targets::normalize_build(original_package.build.as_ref(), package_root)?,
         metabuild: original_package.metabuild.clone(),
         default_target: original_package.default_target.clone(),
         forced_target: original_package.forced_target.clone(),
@@ -2712,7 +2712,7 @@ fn prepare_toml_for_publish(
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
     if let Some(StringOrBool::String(path)) = &package.build {
-        let path = paths::normalize_path(Path::new(path));
+        let path = Path::new(path).to_path_buf();
         let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
         let build = if included {
             let path = path
@@ -3017,7 +3017,7 @@ pub fn prepare_target_for_publish(
     gctx: &GlobalContext,
 ) -> CargoResult<Option<manifest::TomlTarget>> {
     let path = target.path.as_ref().expect("previously normalized");
-    let path = normalize_path(&path.0);
+    let path = &path.0;
     if let Some(packaged_files) = packaged_files {
         if !packaged_files.contains(&path) {
             let name = target.name.as_ref().expect("previously normalized");
@@ -3030,7 +3030,7 @@ pub fn prepare_target_for_publish(
     }
 
     let mut target = target.clone();
-    let path = normalize_path_sep(path, context)?;
+    let path = normalize_path_sep(path.to_path_buf(), context)?;
     target.path = Some(manifest::PathValue(path.into()));
 
     Ok(Some(target))
