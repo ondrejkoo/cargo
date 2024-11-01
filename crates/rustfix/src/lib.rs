@@ -216,23 +216,23 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
 /// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
 /// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
 #[derive(Clone)]
-pub struct CodeFix {
-    data: replace::Data,
+pub struct CodeFix<'orig> {
+    data: replace::Data<'orig>,
     /// Whether or not the data has been modified.
     modified: bool,
 }
 
-impl CodeFix {
+impl<'orig> CodeFix<'orig> {
     /// Creates a `CodeFix` with the source of a file to modify.
-    pub fn new(s: &str) -> CodeFix {
+    pub fn new(s: &'orig str) -> CodeFix<'orig> {
         CodeFix {
-            data: replace::Data::new(s.as_bytes()),
+            data: replace::Data::new(s),
             modified: false,
         }
     }
 
     /// Applies a suggestion to the code.
-    pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
+    pub fn apply(&mut self, suggestion: &'orig Suggestion) -> Result<(), Error> {
         for solution in &suggestion.solutions {
             self.apply_solution(solution)?;
         }
@@ -240,18 +240,20 @@ impl CodeFix {
     }
 
     /// Applies an individual solution from a [`Suggestion`].
-    pub fn apply_solution(&mut self, solution: &Solution) -> Result<(), Error> {
+    pub fn apply_solution(&mut self, solution: &'orig Solution) -> Result<(), Error> {
         for r in &solution.replacements {
             self.data
-                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
-            self.modified = true;
+                .replace_range(r.snippet.range.clone(), &r.replacement)
+                .inspect_err(|_| self.data.restore())?;
         }
+        self.data.commit();
+        self.modified = true;
         Ok(())
     }
 
     /// Gets the result of the "fixed" code.
     pub fn finish(&self) -> Result<String, Error> {
-        Ok(String::from_utf8(self.data.to_vec())?)
+        self.data.to_string()
     }
 
     /// Returns whether or not the data has been modified.
@@ -260,22 +262,21 @@ impl CodeFix {
     }
 }
 
-/// Applies multiple `suggestions` to the given `code`.
+/// Applies multiple `suggestions` to the given `code`, discarding identical suggestions automatically.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
-    let mut already_applied = HashSet::new();
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        // This assumes that if any of the machine applicable fixes in
-        // a diagnostic suggestion is a duplicate, we should see the
-        // entire suggestion as a duplicate.
-        if suggestion
-            .solutions
-            .iter()
-            .any(|sol| !already_applied.insert(sol))
-        {
-            continue;
-        }
-        fix.apply(suggestion)?;
+        fix.apply(suggestion).or_else(ignore_identical)?;
     }
     fix.finish()
+}
+
+/// Discard errors for identical changes while passing through other error types.
+pub fn ignore_identical<T: Default>(err: Error) -> Result<T, Error> {
+    match err {
+        Error::AlreadyReplaced {
+            is_identical: true, ..
+        } => Ok(Default::default()),
+        _ => Err(err),
+    }
 }
