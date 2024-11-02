@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  rust:
+    name: Client test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-protoc@v2
+
+      - run: rustup toolchain install stable
+
+      - uses: Swatinem/rust-cache@v2
+      
+      - run: cargo test -p sshx
